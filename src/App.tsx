@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Editor from "./pages/Editor";
 import Tokens from "./pages/Tokens";
+import JsonPreview from "./pages/JsonPreview";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/signup" element={<Signup />} />
             <Route path="/editor" element={<Editor />} />
             <Route path="/tokens" element={<Tokens />} />
+            <Route path="/json-preview" element={<JsonPreview />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
