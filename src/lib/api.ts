@@ -1,42 +1,43 @@
 // API Service Layer for Schema Forge CMS
-// Replace BASE_URL with your actual backend URL
 
 import type { ContentData } from '@/types/content';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.example.com';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 interface ApiResponse<T> {
   data?: T;
   error?: string;
 }
 
-// Auth token management
-let authToken: string | null = localStorage.getItem('auth_token');
+// JWT token management
+const TOKEN_KEY = 'jwt_token';
 
 export const setAuthToken = (token: string | null) => {
-  authToken = token;
   if (token) {
-    localStorage.setItem('auth_token', token);
+    localStorage.setItem(TOKEN_KEY, token);
   } else {
-    localStorage.removeItem('auth_token');
+    localStorage.removeItem(TOKEN_KEY);
   }
 };
 
-export const getAuthToken = () => authToken;
+export const getAuthToken = (): string | null => {
+  return localStorage.getItem(TOKEN_KEY);
+};
 
-// Generic fetch wrapper
+// Generic fetch wrapper with JWT Bearer auth
 async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
   try {
+    const token = getAuthToken();
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...(options.headers as Record<string, string>),
     };
 
-    if (authToken) {
-      headers['Authorization'] = `Bearer ${authToken}`;
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
 
     const response = await fetch(`${BASE_URL}${endpoint}`, {
@@ -46,7 +47,7 @@ async function apiRequest<T>(
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      return { error: errorData.message || `HTTP ${response.status}` };
+      return { error: errorData.message || errorData.error || `HTTP ${response.status}` };
     }
 
     const data = await response.json();
@@ -71,7 +72,7 @@ export interface SignupCredentials {
 
 export interface AuthResponse {
   token: string;
-  user: {
+  user?: {
     id: string;
     email: string;
     name?: string;
@@ -80,7 +81,7 @@ export interface AuthResponse {
 
 export const authApi = {
   login: async (credentials: LoginCredentials) => {
-    const response = await apiRequest<AuthResponse>('/auth/login', {
+    const response = await apiRequest<AuthResponse>('/user/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
@@ -91,9 +92,12 @@ export const authApi = {
   },
 
   signup: async (credentials: SignupCredentials) => {
-    const response = await apiRequest<AuthResponse>('/auth/signup', {
+    const response = await apiRequest<AuthResponse>('/user/register', {
       method: 'POST',
-      body: JSON.stringify(credentials),
+      body: JSON.stringify({
+        email: credentials.email,
+        password: credentials.password,
+      }),
     });
     if (response.data?.token) {
       setAuthToken(response.data.token);
@@ -101,13 +105,8 @@ export const authApi = {
     return response;
   },
 
-  logout: async () => {
-    await apiRequest('/auth/logout', { method: 'POST' });
+  logout: () => {
     setAuthToken(null);
-  },
-
-  getCurrentUser: async () => {
-    return apiRequest<AuthResponse['user']>('/auth/me');
   },
 };
 
@@ -143,31 +142,30 @@ export interface ApiToken {
 }
 
 export interface CreateTokenResponse {
-  token: string; // The actual token value (shown once)
+  token: string;
   tokenInfo: ApiToken;
 }
 
 export const tokensApi = {
   listTokens: async () => {
-    return apiRequest<ApiToken[]>('/tokens');
+    return apiRequest<ApiToken[]>('/user/apitokens');
   },
 
   createToken: async (name: string) => {
-    return apiRequest<CreateTokenResponse>('/tokens', {
+    return apiRequest<CreateTokenResponse>('/admin/apitokens', {
       method: 'POST',
       body: JSON.stringify({ name }),
     });
   },
 
-  deleteToken: async (tokenId: string) => {
-    return apiRequest<void>(`/tokens/${tokenId}`, {
+  revokeToken: async (tokenId: string) => {
+    return apiRequest<ApiToken>(`/admin/apitokens/${tokenId}`, {
       method: 'DELETE',
     });
   },
 
-  revokeToken: async (tokenId: string) => {
-    return apiRequest<ApiToken>(`/tokens/${tokenId}/revoke`, {
-      method: 'POST',
-    });
+  // Alias for backwards compatibility
+  deleteToken: async (tokenId: string) => {
+    return tokensApi.revokeToken(tokenId);
   },
 };
