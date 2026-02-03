@@ -19,18 +19,9 @@ export default function Editor() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    loadContent();
-  }, []);
-
-  const loadContent = async () => {
-    setIsLoading(true);
-    const response = await contentApi.getContent();
-    if (response.data?.data) {
-      setContent(response.data.data);
-      setOriginalContent(response.data.data);
-    }
+    // Load from defaultContent directly (no API call for now)
     setIsLoading(false);
-  };
+  }, []);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -89,7 +80,9 @@ export default function Editor() {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const imported = JSON.parse(e.target?.result as string);
+        const parsed = JSON.parse(e.target?.result as string);
+        // Handle both { data: {...} } wrapper and direct content
+        const imported = parsed.data ? parsed.data : parsed;
         setContent(imported as ContentData);
         toast({
           title: 'Imported',

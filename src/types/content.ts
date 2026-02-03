@@ -114,30 +114,69 @@ export type BannerData = z.infer<typeof bannerSchema>;
 export type MainContentData = z.infer<typeof mainContentSchema>;
 export type FooterData = z.infer<typeof footerSchema>;
 
-// Default empty content
+// Default sample content
 export const defaultContent: ContentData = {
   header: {
-    logo: [],
-    navbar: [],
-    actionButton: [],
+    logo: [
+      { url: 'https://cdn.site.com/logo.png', alt: 'Company Logo' },
+    ],
+    navbar: [
+      { label: 'Home', href: '/' },
+      { label: 'About', href: '/about' },
+      { label: 'Contact', href: '/contact' },
+      { label: 'Pricing', href: '/pricing' },
+    ],
+    actionButton: [
+      { label: 'Get Started', href: '/signup' },
+    ],
   },
   banner: {
-    headline: [],
-    subtext: [],
-    heroMedia: [],
-    primaryCTA: [],
-    secondaryCTA: [],
+    headline: [
+      { text: 'Build Faster With Our Website' },
+    ],
+    subtext: [
+      { text: 'Everything you need to launch quickly' },
+    ],
+    heroMedia: [
+      { type: 'image', url: 'https://cdn.site.com/hero.jpg' },
+    ],
+    primaryCTA: [
+      { label: 'Start Free Trial', href: '/trial' },
+    ],
+    secondaryCTA: [
+      { label: 'Contact Sales', href: '/contact' },
+    ],
   },
   mainContent: {
-    introduction: [],
-    cards: [],
-    carousel: [],
-    highlights: [],
+    introduction: [
+      { text: 'Our platform helps teams ship faster.' },
+    ],
+    cards: [
+      { title: 'Speed', description: 'Fast development' },
+      { title: 'Scalability', description: 'Grows with you' },
+    ],
+    carousel: [
+      { image: 'https://cdn.site.com/slide1.jpg' },
+      { image: 'https://cdn.site.com/slide2.jpg' },
+    ],
+    highlights: [
+      { text: 'Trusted by 10k+ users' },
+    ],
   },
   footer: {
-    links: [],
-    socialIcons: [],
-    contactInfo: [],
-    copyrights: [],
+    links: [
+      { label: 'Privacy Policy', href: '/privacy' },
+    ],
+    socialIcons: [
+      { platform: 'twitter', url: 'https://twitter.com/company' },
+      { platform: 'facebook', url: 'https://facebook.com/company' },
+      { platform: 'linkedin', url: 'https://linkedin.com/company' },
+    ],
+    contactInfo: [
+      { email: 'support@company.com', phone: '', address: '' },
+    ],
+    copyrights: [
+      { text: '© 2026 Company Inc.' },
+    ],
   },
 };
