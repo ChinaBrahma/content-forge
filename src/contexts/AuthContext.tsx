@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authApi, getAuthToken, setAuthToken } from '@/lib/api';
 
 interface User {
   id: string;
@@ -18,36 +17,31 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Mock auth - allows any credentials for testing
+const STORAGE_KEY = 'mock_user';
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already authenticated
-    const checkAuth = async () => {
-      const token = getAuthToken();
-      if (token) {
-        const response = await authApi.getCurrentUser();
-        if (response.data) {
-          setUser(response.data);
-        } else {
-          setAuthToken(null);
-        }
-      }
-      setIsLoading(false);
-    };
-
-    checkAuth();
+    // Check for existing mock session
+    const storedUser = localStorage.getItem(STORAGE_KEY);
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+    setIsLoading(false);
   }, []);
 
   const login = async (email: string, password: string) => {
-    const response = await authApi.login({ email, password });
-    if (response.error) {
-      return { error: response.error };
-    }
-    if (response.data?.user) {
-      setUser(response.data.user);
-    }
+    // Mock login - accept any credentials
+    const mockUser: User = {
+      id: crypto.randomUUID(),
+      email,
+      name: email.split('@')[0],
+    };
+    setUser(mockUser);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(mockUser));
     return {};
   };
 
@@ -55,19 +49,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (password !== confirmPassword) {
       return { error: 'Passwords do not match' };
     }
-    const response = await authApi.signup({ email, password, confirmPassword });
-    if (response.error) {
-      return { error: response.error };
-    }
-    if (response.data?.user) {
-      setUser(response.data.user);
-    }
+    // Mock signup - accept any credentials
+    const mockUser: User = {
+      id: crypto.randomUUID(),
+      email,
+      name: email.split('@')[0],
+    };
+    setUser(mockUser);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(mockUser));
     return {};
   };
 
   const logout = async () => {
-    await authApi.logout();
     setUser(null);
+    localStorage.removeItem(STORAGE_KEY);
   };
 
   return (
