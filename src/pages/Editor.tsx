@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Save, RotateCcw, Loader2, LayoutDashboard, Image, FileText, Link2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Save, RotateCcw, Loader2, LayoutDashboard, Image, FileText, Link2, Send, Upload, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { EditorSection } from '@/components/editor/EditorSection';
@@ -14,6 +15,8 @@ export default function Editor() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadContent();
@@ -59,6 +62,51 @@ export default function Editor() {
 
   const hasChanges = JSON.stringify(content) !== JSON.stringify(originalContent);
 
+  const handlePublish = () => {
+    navigate('/json-preview', { state: { content } });
+  };
+
+  const handleExport = () => {
+    const blob = new Blob([JSON.stringify(content, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'content.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({
+      title: 'Exported',
+      description: 'JSON file downloaded successfully.',
+    });
+  };
+
+  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const imported = JSON.parse(e.target?.result as string);
+        setContent(imported as ContentData);
+        toast({
+          title: 'Imported',
+          description: 'JSON content loaded into editor.',
+        });
+      } catch {
+        toast({
+          variant: 'destructive',
+          title: 'Import failed',
+          description: 'Invalid JSON file.',
+        });
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  };
+
   // Generic handler for array fields
   const updateArrayField = <T extends Record<string, unknown>>(
     section: keyof ContentData,
@@ -88,14 +136,29 @@ export default function Editor() {
     <DashboardLayout>
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Page Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Content Editor</h1>
             <p className="text-sm text-muted-foreground mt-1">
               Edit your website content using the form below
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImport}
+              accept=".json"
+              className="hidden"
+            />
+            <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+              <Upload className="h-4 w-4 mr-2" />
+              Import
+            </Button>
+            <Button variant="outline" onClick={handleExport}>
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
             <Button
               variant="outline"
               onClick={handleReset}
@@ -108,12 +171,16 @@ export default function Editor() {
               {isSaving ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              Save Changes
-            </Button>
-          </div>
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            Save Changes
+          </Button>
+          <Button onClick={handlePublish} className="bg-primary hover:bg-primary/90">
+            <Send className="h-4 w-4 mr-2" />
+            Publish
+          </Button>
         </div>
+      </div>
 
         {/* Header Section */}
         <EditorSection
