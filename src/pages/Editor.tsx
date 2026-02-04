@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, RotateCcw, Loader2, LayoutDashboard, Image, FileText, Link2, Send, Upload, Download } from 'lucide-react';
+import { Save, RotateCcw, Loader2, LayoutDashboard, Image, FileText, Link2, Send, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { EditorSection } from '@/components/editor/EditorSection';
 import { ArrayFieldEditor } from '@/components/editor/ArrayFieldEditor';
+import { ContentTypeSelector } from '@/components/editor/ContentTypeSelector';
 import { useToast } from '@/hooks/use-toast';
 import { contentApi } from '@/lib/api';
 import { ContentData, defaultContent } from '@/types/content';
@@ -12,20 +13,35 @@ import { ContentData, defaultContent } from '@/types/content';
 export default function Editor() {
   const [content, setContent] = useState<ContentData>(defaultContent as ContentData);
   const [originalContent, setOriginalContent] = useState<ContentData>(defaultContent as ContentData);
-  const [isLoading, setIsLoading] = useState(true);
+  const [currentContentTypeId, setCurrentContentTypeId] = useState<string | null>(null);
+  const [currentContentId, setCurrentContentId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    // Load from defaultContent directly (no API call for now)
-    setIsLoading(false);
-  }, []);
+  // Handle content loaded from ContentTypeSelector
+  const handleContentLoad = (loadedContent: ContentData, contentTypeId: string, contentId: string) => {
+    setContent(loadedContent);
+    setOriginalContent(loadedContent);
+    setCurrentContentTypeId(contentTypeId);
+    setCurrentContentId(contentId);
+  };
 
   const handleSave = async () => {
+    if (!currentContentTypeId || !currentContentId) {
+      toast({
+        variant: 'destructive',
+        title: 'Cannot save',
+        description: 'Please load a content first before saving.',
+      });
+      return;
+    }
+
     setIsSaving(true);
-    const response = await contentApi.updateContent(content);
+    const response = await contentApi.updateContent(currentContentTypeId, currentContentId, content);
     setIsSaving(false);
 
     if (response.error) {
@@ -53,8 +69,34 @@ export default function Editor() {
 
   const hasChanges = JSON.stringify(content) !== JSON.stringify(originalContent);
 
-  const handlePublish = () => {
-    navigate('/json-preview', { state: { content } });
+  const handlePublish = async () => {
+    if (!currentContentTypeId) {
+      // Navigate to preview if no content type selected
+      navigate('/json-preview', { state: { content } });
+      return;
+    }
+
+    setIsPublishing(true);
+    const response = await contentApi.publishContent(currentContentTypeId, content);
+    setIsPublishing(false);
+
+    if (response.error) {
+      toast({
+        variant: 'destructive',
+        title: 'Publish failed',
+        description: response.error,
+      });
+    } else {
+      toast({
+        title: 'Content published',
+        description: 'Your content has been published successfully.',
+      });
+      // Update current content ID to the newly created one
+      if (response.data) {
+        setCurrentContentId(response.data._id);
+        setOriginalContent(content);
+      }
+    }
   };
 
   const handleExport = () => {
@@ -144,9 +186,9 @@ export default function Editor() {
               accept=".json"
               className="hidden"
             />
+            <ContentTypeSelector onContentLoad={handleContentLoad} />
             <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-              <Upload className="h-4 w-4 mr-2" />
-              Import
+              Import File
             </Button>
             <Button variant="outline" onClick={handleExport}>
               <Download className="h-4 w-4 mr-2" />
@@ -160,19 +202,23 @@ export default function Editor() {
               <RotateCcw className="h-4 w-4 mr-2" />
               Reset
             </Button>
-            <Button onClick={handleSave} disabled={!hasChanges || isSaving}>
+            <Button onClick={handleSave} disabled={!hasChanges || isSaving || !currentContentId}>
               {isSaving ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            Save Changes
-          </Button>
-          <Button onClick={handlePublish} className="bg-primary hover:bg-primary/90">
-            <Send className="h-4 w-4 mr-2" />
-            Publish
-          </Button>
-        </div>
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Save Changes
+            </Button>
+            <Button onClick={handlePublish} disabled={isPublishing} className="bg-primary hover:bg-primary/90">
+              {isPublishing ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4 mr-2" />
+              )}
+              Publish
+            </Button>
+          </div>
       </div>
 
         {/* Header Section */}

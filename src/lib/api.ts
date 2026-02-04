@@ -110,22 +110,63 @@ export const authApi = {
   },
 };
 
-// ============ Content API ============
+// ============ Content Types API ============
+
+export interface ContentType {
+  _id: string;
+  name: string;
+  type: string;
+  fields: ContentData;
+  contentsId: string[];
+  userId: string;
+  createdAt: string;
+}
+
+export interface ContentTypesListResponse {
+  success: boolean;
+  message: string;
+  data: ContentType[];
+}
+
+export interface ContentItem {
+  _id: string;
+  contentTypeId: string;
+  data: ContentData;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface ContentListResponse {
+  success: boolean;
+  message: string;
+  data: ContentItem[];
+}
 
 export type { ContentData };
 
-export interface ContentApiResponse {
-  data: ContentData;
-}
-
 export const contentApi = {
-  getContent: async () => {
-    return apiRequest<ContentApiResponse>('/content');
+  // Fetch all content types
+  getContentTypes: async () => {
+    return apiRequest<ContentTypesListResponse>('/content-types/list');
   },
 
-  updateContent: async (content: ContentData) => {
-    return apiRequest<ContentApiResponse>('/content', {
-      method: 'PUT',
+  // Fetch all contents for a specific content type
+  getContents: async (contentTypeId: string) => {
+    return apiRequest<ContentListResponse>(`/content/${contentTypeId}`);
+  },
+
+  // Update existing content (PATCH)
+  updateContent: async (contentTypeId: string, contentId: string, content: ContentData) => {
+    return apiRequest<ContentItem>(`/${contentTypeId}/update/${contentId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ data: content }),
+    });
+  },
+
+  // Publish/Create new content (POST)
+  publishContent: async (contentTypeId: string, content: ContentData) => {
+    return apiRequest<ContentItem>(`/content/${contentTypeId}`, {
+      method: 'POST',
       body: JSON.stringify({ data: content }),
     });
   },
